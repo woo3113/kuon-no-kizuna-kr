@@ -1,0 +1,23 @@
+SCP blocks=327 text-lines=11677 (0.2s)
+Android stream=24563 (0.5s)
+distinct android names=2183
+aligning 326 blocks ...
+  [0/326] G_ms01 N=29 start=10308 score=159.2 hit=4 (1s, eta 419s)
+  [20/326] G_ms21 N=38 start=13309 score=273.2 hit=5 (30s, eta 435s)
+  [40/326] G_ms63 N=41 start=9893 score=255.2 hit=1 (51s, eta 354s)
+  [60/326] G_ms101 N=35 start=5605 score=314.4 hit=0 (65s, eta 280s)
+  [80/326] G_ms121 N=40 start=16046 score=232.8 hit=0 (80s, eta 242s)
+  [100/326] G_ms141 N=9 start=8277 score=57.0 hit=0 (98s, eta 219s)
+  [120/326] G_ms165 N=24 start=12702 score=173.8 hit=0 (121s, eta 205s)
+  [140/326] G_ms189 N=32 start=9926 score=221.2 hit=0 (141s, eta 185s)
+  [160/326] G_ms321 N=34 start=11208 score=218.4 hit=3 (171s, eta 175s)
+  [180/326] H_ms13 N=30 start=5646 score=230.4 hit=0 (187s, eta 150s)
+  [200/326] H_ms34 N=45 start=8714 score=354.1 hit=3 (209s, eta 130s)
+  [220/326] H_ms55 N=38 start=24289 score=263.6 hit=5 (226s, eta 107s)
+  [240/326] E_ms14 N=27 start=4601 score=153.5 hit=2 (241s, eta 85s)
+  [260/326] E_ms34 N=42 start=22269 score=234.8 hit=2 (265s, eta 66s)
+  [280/326] B_ms19 N=23 start=8510 score=157.0 hit=0 (290s, eta 46s)
+  [300/326] B_ms39 N=30 start=13450 score=181.1 hit=10 (316s, eta 26s)
+  [320/326] N_ms17 N=167 start=3626 score=1098.8 hit=19 (466s, eta 7s)
+  [325/326] N_ms22 N=181 start=5551 score=1008.4 hit=12 (642s, eta 0s)
+done total 642s

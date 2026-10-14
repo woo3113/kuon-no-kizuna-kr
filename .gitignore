@@ -1,0 +1,25 @@
+# 대용량 게임 바이너리
+*.zip
+*.7z
+*.apk
+*.iso
+*.cue
+*.bin
+_work/apk/
+_work/psp/
+_work/psp_work/
+_work/ps2/
+_work/ps2/ex/
+_work/ps2/krfont/
+_work/krfont/*.FNT
+FNT
+
+# 중간 산출물/캐시
+*dirty*
+*_cache*.jsonl
+__pycache__/
+*.pyc
+rp2_screen*.png
+
+# 개인/임시
+*.log.bak

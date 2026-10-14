@@ -1,0 +1,8 @@
+blocks=326 assigned=224 forced=102
+prefix agreement: {'N': 71, 'Y': 255}  Y/(Y+N)=78.2%
+   B: {'N': 12, 'Y': 38}
+   E: {'Y': 25, 'N': 10}
+   G: {'Y': 153, 'N': 15}
+   H: {'N': 20, 'Y': 39}
+   N: {'N': 14}
+line mappings=11677
