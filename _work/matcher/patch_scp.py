@@ -1,8 +1,8 @@
-"""patch_scp.py — SCRIPT.SCP 에 한국어 삽입 + 재빌드
-- 태그(<...>)와 인자, \r 청크 구조 보존
-- 각 라벨그룹의 일본어 텍스트를 해당 한국어로 교체(첫 텍스트 청크에 배치)
-- 블록 크기 변동 -> 인덱스 재계산
-출력: _work/matcher/SCRIPT_kr.SCP, patch_scp.log
+"""patch_scp.py — SCRIPT.SCP 에 한국어 삽입 (원본 청크 구조 보존 방식)
+- 각 라벨그룹의 '원본 텍스트 런' 위치/개수를 그대로 두고, 한국어를 런 길이 비례로 분배
+- 태그(<...>)와 인자는 원위치 보존
+- 선두 전각공백(0x8140) 유지
+출력: _work/matcher/SCRIPT_kr.SCP (PSP) / SCRIPT_kr_ps2.SCP (PS2)
 """
 import struct, re, os, io, json
 
@@ -11,6 +11,7 @@ SCP = PROJ + r'\_work\psp_work\usrdir\PSP_GAME\USRDIR\SCRIPT.SCP'
 MAP = PROJ + r'\_work\krfont\kr_code_map.json'
 KRTSV = PROJ + r'\_work\matcher\kr_psp.tsv'
 OUTD = os.path.dirname(os.path.abspath(__file__))
+OUTNAME = 'SCRIPT_kr.SCP'
 
 code_of = {s: bytes.fromhex(v) for s, v in json.load(open(MAP, encoding='utf-8')).items()}
 kr = {}
@@ -25,100 +26,104 @@ HC TC IF FLAG INC SELECT SHOCK0 SHOCK1 QUAKE QUAKE2 WHITE_IN WHITE_OUT MASK STOP
 KOUSHI FULLANM MOVE_LIGHT NONEWAITSPANM STOP_NONEWAITSPANM SPANM""".split())
 TAGTAG = re.compile(r'<([A-Za-z0-9_]+)>')
 CJK = re.compile(r'[\u3040-\u30ff\u4e00-\u9fff\u3000-\u303f\u2010-\u2030\u25a0-\u25ff]')
+FWSP = '\u3000'
 
 def enc_kr(s):
     b = bytearray()
     for ch in s:
-        if ch in code_of:
-            b += code_of[ch]
-        elif ord(ch) < 0x80:
-            b += bytes([ord(ch)])
-        elif ch == '\u3000':
-            b += b'\x81\x40'
+        if ch in code_of: b += code_of[ch]
+        elif ord(ch) < 0x80: b += bytes([ord(ch)])
+        elif ch == FWSP: b += b'\x81\x40'
         else:
             try: b += ch.encode('shift_jis')
             except Exception: b += b'?'
     return bytes(b)
 
-# tag+arg 토큰 스캐너(ARGTAGS만 인자 소비)
 def tokens(ch):
+    """(is_tag, text) 목록. ARGTAG 는 인자까지 태그로 취급."""
     out = []; last = 0; i = 0
     while True:
         m = TAGTAG.search(ch, i)
         if not m: break
         if m.start() > last: out.append((False, ch[last:m.start()]))
-        name = m.group(1)
-        j = m.end()
+        name = m.group(1); j = m.end()
         if name.upper() in ARGTAGS:
             k = j
-            while k < len(ch) and (ch[k].isascii() and (ch[k].isalnum() or ch[k] in '_,.-')):
-                k += 1
+            while k < len(ch) and (ch[k].isascii() and (ch[k].isalnum() or ch[k] in '_,.-')): k += 1
             out.append((True, ch[m.start():k])); last = k; i = k
         else:
             out.append((True, ch[m.start():j])); last = j; i = j
     if last < len(ch): out.append((False, ch[last:]))
     return out
 
+def rebuild_group(chunks, slices_by_run, only_idx):
+    """chunks: 원본 \r 분할. slices_by_run: {(ci,ti): kr_slice}. 태그/구조 보존."""
+    out = bytearray()
+    for ci, ch in enumerate(chunks):
+        for ti, (isg, val) in enumerate(tokens(ch)):
+            if isg:
+                out += val.encode('ascii', 'replace')
+            else:
+                if CJK.search(val):
+                    out += enc_kr(slices_by_run.get((ci, ti), ''))
+                else:
+                    out += val.encode('cp932', 'replace')   # 숫자/공백 등 원본 유지
+        if ci < len(chunks)-1: out += b'\r'
+    return bytes(out)
+
 dd = bytes(b ^ 0xFF for b in open(SCP, 'rb').read())
 cnt = struct.unpack_from('<I', dd, 0)[0]
 ents = []
 for i in range(cnt):
     o = 4 + i*24
-    name = dd[o:o+16]
-    off, size = struct.unpack_from('<II', dd, o+16)
-    ents.append([name, off, size])
+    ents.append([dd[o:o+16], *struct.unpack_from('<II', dd, o+16)])
 D0 = 4 + cnt*24
 
 LOG = io.open(os.path.join(OUTD, 'patch_scp.log'), 'w', encoding='utf-8')
-def log(x=''): LOG.write(x+'\n')
+def log(x=''): LOG.write(x + '\n')
 
-newdata = bytearray()
-newents = []
+newdata = bytearray(); newents = []
 nrepl = nmiss = 0
 for name, off, size in ents:
     nm = name.split(b'\x00')[0].decode('ascii', 'replace')
     block = dd[D0+off:D0+off+size].decode('cp932', 'replace')
     parts = re.split(r'(:\d{4,6})', block)
-    out = bytearray()
+    out = bytearray(); out += parts[0].encode('cp932', 'replace')
     idx = -1
-    # parts[0] = 라벨 이전(보통 없음), 이후 [label, body] 반복
-    out += parts[0].encode('cp932', 'replace')
     for k in range(1, len(parts), 2):
-        label = parts[k]
-        body = parts[k+1] if k+1 < len(parts) else ''
+        label = parts[k]; body = parts[k+1] if k+1 < len(parts) else ''
         out += label.encode('ascii')
         chunks = body.split('\r')
-        # 그룹 텍스트 존재 판정
-        has = any(any((not isg) and CJK.search(v) for isg, v in tokens(ch)) for ch in chunks)
-        if not has:
+        tokchunks = [tokens(ch) for ch in chunks]
+        runs = [(ci, ti, v) for ci, tc in enumerate(tokchunks) for ti, (isg, v) in enumerate(tc)
+                if not isg and CJK.search(v)]
+        if not runs:
             out += body.encode('cp932', 'replace'); continue
         idx += 1
         kr_s = kr.get((nm, str(idx)), '')
         if not kr_s:
-            nmiss += 1
-            out += body.encode('cp932', 'replace')      # 번역 없으면 원문 유지
-            continue
-        krb = enc_kr(kr_s); placed = False
-        for ci, ch in enumerate(chunks):
-            for isg, v in tokens(ch):
-                if isg:
-                    out += v.encode('ascii', 'replace')
-                else:
-                    if (not placed) and CJK.search(v):
-                        out += krb; placed = True
-            if ci < len(chunks) - 1: out += b'\r'
-        if placed: nrepl += 1
+            nmiss += 1; out += body.encode('cp932', 'replace'); continue
+        jp_all = ''.join(v for _, _, v in runs)
+        if jp_all.startswith(FWSP) and not kr_s.startswith(FWSP):
+            kr_s = FWSP + kr_s
+        L = len(kr_s); total = sum(len(v) for _, _, v in runs)
+        bounds = [0]; cum = 0
+        for _, _, v in runs:
+            cum += len(v); bounds.append(round(L*cum/total))
+        bounds[-1] = L
+        slices = {}
+        for r, (ci, ti, v) in enumerate(runs):
+            slices[(ci, ti)] = kr_s[bounds[r]:bounds[r+1]]
+        out += rebuild_group(chunks, slices, idx)
+        nrepl += 1
     nb = bytes(out)
     newents.append([name, len(newdata), len(nb)])
     newdata += nb
 
-hdr = bytearray()
-hdr += struct.pack('<I', cnt)
-for name, off, size in newents:
-    hdr += name + struct.pack('<II', off, size)
+hdr = bytearray(); hdr += struct.pack('<I', cnt)
+for name, off, size in newents: hdr += name + struct.pack('<II', off, size)
 full = bytes(hdr) + bytes(newdata)
-enc = bytes(x ^ 0xFF for x in full)
-open(os.path.join(OUTD, 'SCRIPT_kr.SCP'), 'wb').write(enc)
+open(os.path.join(OUTD, OUTNAME), 'wb').write(bytes(x ^ 0xFF for x in full))
 log("blocks=%d  replaced groups=%d  missing_kr=%d" % (cnt, nrepl, nmiss))
 log("size %d -> %d" % (len(dd), len(full)))
 LOG.close()

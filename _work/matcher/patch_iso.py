@@ -5,7 +5,7 @@ import struct, os, shutil
 
 PROJ = r'F:\TeraBoxDownload\구원의반'
 PRISTINE = PROJ + r'\_work\psp_work\kizuna_psp.iso'
-DST = r'F:\psptest\Kuon no Kizuna - Sairinshou Portable (K).iso'
+DST = r'F:\psptest\Kuon no Kizuna - Sairinshou Portable (K) v2.iso'
 F1 = open(PROJ + r'\_work\krfont\FONT1.FNT', 'rb').read()
 F2 = open(PROJ + r'\_work\krfont\FONT2.FNT', 'rb').read()
 SCPKR = open(PROJ + r'\_work\matcher\SCRIPT_kr.SCP', 'rb').read()

@@ -69,6 +69,7 @@ def build(srcpath, dstpath, bold=0, shift=(0.0, 0.0)):
     open(dstpath, 'wb').write(bytes(out))
     print("  %s: %d -> %d (cnt %d->%d bold=%d shift=%s)" % (os.path.basename(srcpath), len(raw), len(out), cnt, cnt+len(syllables), bold, shift))
 
+# 배포된 한글패치와 동일: FONT1 = FONT2 (동일 글리프, 굵기/시프트 차이 없음)
 build(SRC_FONT1, os.path.join(OUTDIR, 'FONT1.FNT'), bold=0, shift=(0.0, 0.0))
-build(SRC_FONT2, os.path.join(OUTDIR, 'FONT2.FNT'), bold=1, shift=(-0.11, 0.19))
+build(SRC_FONT2, os.path.join(OUTDIR, 'FONT2.FNT'), bold=0, shift=(0.0, 0.0))
 print("done")
